@@ -1,26 +1,64 @@
+from lista import ListaDoblementeEnlazada
 import xml.etree.ElementTree as ET
+from nodos import Nodo
+from maquetas import Maqueta
+import tkinter as tk
+from tkinter import filedialog
 
-xml_file = None
+lst_maquetas = ListaDoblementeEnlazada()
 
-while True:
+def abrir_archivo():
+    root = tk.Tk()
+    root.withdraw()
+
+    while True:  # Bucle externo para solicitar un archivo válido
+            archivo = filedialog.askopenfilename(title="Seleccionar archivo")
+
+            if archivo:  # Verificar si se seleccionó un archivo
+                leer_archivo(archivo)
+                break  # Salir del bucle externo si se seleccionó un archivo válido
+            else:
+                print("No se seleccionó ningún archivo. Por favor, seleccione un archivo válido.")
+
+def leer_archivo(archivo_seleccionado):
+    archivo_xml = None
+
+    while True:
+        try:
+            archivo_xml = open(archivo_seleccionado)
+            break
+        except FileNotFoundError as file_err:
+            print(f"Error: El archivo {archivo_seleccionado} no se encuentra.")
+            archivo_xml = None
+    
     try:
-        cargar_archivo = input("Ingrese la ruta del archivo: " )
-        xml_file = open(cargar_archivo)
-        break
-    except FileNotFoundError as file_err:
-        print(f"Error: El archivo {cargar_archivo} no se encuentra.")
-        # Asignar un valor por defecto (puede ser None u otro valor que tenga sentido para tu aplicación)
-        xml_file = None
+        if archivo_xml.readable():
+            datos_xml = ET.fromstring(archivo_xml.read())
 
-try:
-    if xml_file.readable():
-        xml_data = ET.fromstring(xml_file.read())
+            for maqueta_xml in datos_xml.findall('.//maqueta'):
+                nombre = maqueta_xml.find('nombre').text.strip()
+                filas = int(maqueta_xml.find('filas').text.strip())
+                columnas = int(maqueta_xml.find('columnas').text.strip())
+                entrada = (int(maqueta_xml.find('entrada/fila').text.strip()), int(maqueta_xml.find('entrada/columna').text.strip()))
+                objetivos = [(objetivo.find('nombre').text.strip(), int(objetivo.find('fila').text.strip()), int(objetivo.find('columna').text.strip())) for objetivo in maqueta_xml.findall('.//objetivo')]
+                estructura = maqueta_xml.find('estructura').text.strip()
 
-    else:
-        print(False)
-        print("No se encontro el archivo seleccionado intente nuevamente: ")
+                maqueta = Maqueta(nombre, filas, columnas, entrada, objetivos, estructura)
+                new_nodo = Nodo(maqueta)
+                lst_maquetas.agregar_nodo(new_nodo)
+            
+            lst_maquetas.ordenar_alfabeticamente()
 
-except Exception as err:
-    print("Error", err)
-finally:
-    xml_file.close()
+            return lst_maquetas
+
+    except Exception as err:
+        print("Error", err)
+    finally:
+        archivo_xml.close()
+
+abrir_archivo()
+lst_maquetas.imprimir_lista()
+actual = lst_maquetas.cabeza
+while actual:
+    print(f"  - {actual.objeto.nombre}")
+    actual = actual.siguiente
