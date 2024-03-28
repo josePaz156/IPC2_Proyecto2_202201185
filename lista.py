@@ -39,7 +39,6 @@ class ListaDoblementeEnlazada:
             actual = actual.siguiente
         return None
 
-
     def imprimir_lista(self):
         actual = self.cabeza
         while actual:
