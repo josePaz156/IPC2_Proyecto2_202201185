@@ -9,3 +9,11 @@ class Estructura:
         self.color = color
         self.siguiente = None
         self.anterior = None
+
+class Objetivos:
+    def __init__(self, nombre_ob, fila_ob, col_ob):
+        self.nombre_ob = nombre_ob
+        self.fila_ob = fila_ob
+        self.col_ob = col_ob
+        self.siguiente = None
+        self.anterior = None

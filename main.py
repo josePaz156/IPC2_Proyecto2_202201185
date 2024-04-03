@@ -2,10 +2,11 @@ from lista import ListaDoblementeEnlazada
 import xml.etree.ElementTree as ET
 from nodos import Nodo
 from nodos import Estructura
+from recorrido import Recorrido
+from nodos import Objetivos
 from maquetas import Maqueta
 import os
 from os import startfile, system
-import graphviz
 
 lst_maquetas = ListaDoblementeEnlazada()
 
@@ -21,8 +22,21 @@ def leer_archivo(archivo_seleccionado):
                     nombre = maqueta_xml.find('nombre').text.strip()
                     filas = int(maqueta_xml.find('filas').text.strip())
                     columnas = int(maqueta_xml.find('columnas').text.strip())
-                    entrada = (int(maqueta_xml.find('entrada/fila').text.strip()), int(maqueta_xml.find('entrada/columna').text.strip()))
-                    objetivos = [(objetivo.find('nombre').text.strip(), int(objetivo.find('fila').text.strip()), int(objetivo.find('columna').text.strip())) for objetivo in maqueta_xml.findall('.//objetivo')]
+                    etiqueta_entrada = maqueta_xml.find('entrada')
+                    fila_in = int(etiqueta_entrada.find('fila').text.strip())
+                    columna_in = int(etiqueta_entrada.find('columna').text.strip())
+                    # objetivos = [(objetivo.find('nombre').text.strip(), int(objetivo.find('fila').text.strip()), int(objetivo.find('columna').text.strip())) for objetivo in maqueta_xml.findall('.//objetivo')]
+
+                    lst_objetivos = ListaDoblementeEnlazada()
+                    for objetivo in maqueta_xml.findall('.//objetivos/objetivo'):
+                        nombre_objetivo = objetivo.find('nombre').text.strip()
+                        fila_objetivo = int(objetivo.find('fila').text.strip())
+                        columna_objetivo = int(objetivo.find('columna').text.strip())
+                        nuevo_objetivo = Objetivos(nombre_objetivo, fila_objetivo, columna_objetivo)
+                        nuevo_nodo_objetivo = Nodo(nuevo_objetivo)
+                        lst_objetivos.agregar_nodo(nuevo_nodo_objetivo)
+                                           
+
                     estructura = maqueta_xml.find('estructura').text.strip().replace('\n', '').replace(' ', '')
 
                     lst_estructuras = ListaDoblementeEnlazada()
@@ -31,7 +45,7 @@ def leer_archivo(archivo_seleccionado):
                         nuevo_nodo_estructura = Nodo(nueva_estructura)
                         lst_estructuras.agregar_nodo(nuevo_nodo_estructura)
 
-                    maqueta = Maqueta(nombre, filas, columnas, entrada, objetivos, lst_estructuras)
+                    maqueta = Maqueta(nombre, filas, columnas, fila_in, columna_in, lst_objetivos, lst_estructuras)
                     new_nodo = Nodo(maqueta)
                     lst_maquetas.agregar_nodo(new_nodo)
                 
@@ -64,7 +78,8 @@ def crear_grafico():
     nombre = nodo_encontrado.objeto.nombre
     filas = nodo_encontrado.objeto.filas
     columnas = nodo_encontrado.objeto.columnas
-    entrada = nodo_encontrado.objeto.entrada
+    fila_entrada = nodo_encontrado.objeto.fila_in
+    columna_entrada = nodo_encontrado.objeto.col_in
     objetivos = nodo_encontrado.objeto.objetivos
     estructura = nodo_encontrado.objeto.estructura
 
@@ -79,20 +94,31 @@ def crear_grafico():
     label = \"Nombre maqueta =  ''' + nombre +  '''\"
     \n
 
-    piso [\n label=<<TABLE border = \"0\" cellspacing=\"0\" cellpadding=\"10\">
+    piso [\n label=<<TABLE border = \"1\" cellspacing=\"0\" cellpadding=\"10\">
     '''
 
     actual = estructura.cabeza
 
     for i in range(filas):
-        textoDOT += "         <tr>"
+        textoDOT += "        <tr>"
         for j in range(columnas):
-            if actual.objeto.color == "-":
-                textoDOT += f"<td bgcolor=\"white\"></td>"
-            elif actual.objeto.color == "*":
-                textoDOT += f"<td bgcolor=\"black\"></td>"
+            objetivo_en_posicion = False
+            now = objetivos.cabeza
+            while now:
+                if now.objeto.fila_ob == i and now.objeto.col_ob == j:
+                    objetivo_en_posicion = True
+                    textoDOT += f"<td>{now.objeto.nombre_ob}</td>"
+                    break
+                now = now.siguiente
+            if not objetivo_en_posicion:
+                if i == fila_entrada and j == columna_entrada:
+                    textoDOT += f"<td bgcolor=\"green\"></td>"
+                elif actual.objeto.color == "-":
+                    textoDOT += f"<td bgcolor=\"white\"></td>"
+                elif actual.objeto.color == "*":
+                    textoDOT += f"<td bgcolor=\"black\"></td>"
             actual = actual.siguiente
-        textoDOT += "         </tr>\n"
+        textoDOT += "        </tr>\n"
 
     textoDOT += "</TABLE>>\n shape=none\n ];"
     textoDOT += "}\n"
@@ -102,7 +128,54 @@ def crear_grafico():
 
     system('dot -Tpdf maqueta.dot -o maqueta.pdf')
     startfile("maqueta.pdf")
-    
+
+def resolver_maqueta(estructura, fila_inicial, columna_inicial, objetivos):
+    # Crear un grafo de caminos
+    caminos = {}
+    for i in range(estructura.filas):
+        for j in range(estructura.columnas):
+            if (i, j) not in caminos:
+                caminos[(i, j)] = []
+            if i > 0:
+                caminos[(i, j)].append((i - 1, j))
+            if i < estructura.filas - 1:
+                caminos[(i, j)].append((i + 1, j))
+            if j > 0:
+                caminos[(i, j)].append((i, j - 1))
+            if j < estructura.columnas - 1:
+                caminos[(i, j)].append((i, j + 1))
+
+    # Función de backtracking para encontrar el recorrido
+    def encontrar_recorrido(fila, col, recorrido, objetivos_recogidos):
+        if (fila, col) in objetivos:
+            recorrido.recoger_objetivo(objetivos[(fila, col)])
+        if recorrido.objetivos_recogidos.issuperset(objetivos.values()):
+            return recorrido
+
+        siguientes_pasos = caminos[(fila, col)]
+        for paso in siguientes_pasos:
+            if estructura.estructura[paso[0]][paso[1]] != "*":
+                recorrido_nuevo = Recorrido()
+                recorrido_nuevo.agregar_al_camino((fila, col))
+                recorrido_nuevo.camino.extend(recorrido.camino)
+                recorrido_nuevo.objetivos_recogidos = set(recorrido.objetivos_recogidos)
+                recorrido_nuevo.objetivos_recogidos.update(recorrido.objetivos_recogidos)
+                encontrado = encontrar_recorrido(paso[0], paso[1], recorrido_nuevo, objetivos)
+                if encontrado:
+                    return encontrado
+
+        # Si no se encuentra un recorrido que recolecte todos los objetivos,
+        # se devuelve el último recorrido encontrado
+        return recorrido
+
+    # Llamar a la función de backtracking
+    recorrido = encontrar_recorrido(fila_inicial, columna_inicial, Recorrido(), objetivos)
+
+    # Resaltar el recorrido en el mapa
+    for paso in recorrido.camino:
+        estructura.estructura[paso[0]][paso[1]] = ":"
+
+    return recorrido
 
 def imprimir_menu():
     print('\n--------------- Bienevanido a nuestro programa ---------------')
@@ -165,6 +238,13 @@ while True:
             else: 
                 print('Opcion no valida')
                 input('Presione enter para continuar')
+    
+    elif opcion == '3':
+        limpiar_consola()
+        maqueta_seleccionada = input('Seleccione el nombre de la maqueta: ')
+        maqueta_encontrada = lst_maquetas.buscar_nodo(maqueta_seleccionada)
+        resolver_maqueta(maqueta_encontrada)
+
     
     elif opcion == '5':
         print('Gracias por usar nuestro programa vuelva pronto')

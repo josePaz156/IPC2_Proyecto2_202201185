@@ -31,7 +31,15 @@
                     <columna> 1 </columna>
                 </objetivo>
             </objetivos>
-            <estructura> *-*-*****-*-----------*****--**-*----****--*-*--*----**-******--*--*-------********-*------*------- </estructura>
+            <estructura> *-*-*****-*
+                         -----------
+                         *****--**-*
+                         ----****--*
+                         -*--*----**
+                         -******--*-
+                         -*-------**
+                         -*****-*---
+                         ----------- </estructura>
         </maqueta>
         <maqueta>
             <nombre> A </nombre>
@@ -58,7 +66,7 @@
                     <columna> 0 </columna>
                 </objetivo>
             </objetivos>
-            <estructura>    ----
+            <estructura>    ---*
                             *-*-
                             *---
                             *--*
