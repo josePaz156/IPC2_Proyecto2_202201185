@@ -2,13 +2,14 @@ from lista import ListaDoblementeEnlazada
 import xml.etree.ElementTree as ET
 from nodos import Nodo
 from nodos import Estructura
-from recorrido import Recorrido
 from nodos import Objetivos
 from maquetas import Maqueta
 import os
 from os import startfile, system
+from collections import deque
 
 lst_maquetas = ListaDoblementeEnlazada()
+lst_maquetas_resueltas = ListaDoblementeEnlazada()
 
 
 def leer_archivo(archivo_seleccionado):
@@ -61,19 +62,13 @@ def leer_archivo(archivo_seleccionado):
     else:
         print("No se ha seleccionado ningún archivo.")
 
-def crear_grafico():
+def crear_grafico(nodo_encontrado):
 
     if os.path.exists("maqueta.dot"):
         os.remove("maqueta.dot")
     if os.path.exists("maqueta.pdf"):
         os.remove("maqueta.pdf")
 
-    # Buscar maqueta seleccionada
-    maqueta_seleccionada = input('Ingrese el nombre de la maqueta: ')
-
-    nodo_encontrado = lst_maquetas.buscar_nodo(maqueta_seleccionada)
-
-    #Obtener informacion del nodo encontado
 
     nombre = nodo_encontrado.objeto.nombre
     filas = nodo_encontrado.objeto.filas
@@ -94,7 +89,7 @@ def crear_grafico():
     label = \"Nombre maqueta =  ''' + nombre +  '''\"
     \n
 
-    piso [\n label=<<TABLE border = \"1\" cellspacing=\"0\" cellpadding=\"10\">
+    piso [\n label=<<TABLE border = \"0\" cellspacing=\"0\" cellpadding=\"10\">
     '''
 
     actual = estructura.cabeza
@@ -117,6 +112,8 @@ def crear_grafico():
                     textoDOT += f"<td bgcolor=\"white\"></td>"
                 elif actual.objeto.color == "*":
                     textoDOT += f"<td bgcolor=\"black\"></td>"
+                elif actual.objeto.color == "#":
+                    textoDOT += f"<td bgcolor=\"blue\"></td>"
             actual = actual.siguiente
         textoDOT += "        </tr>\n"
 
@@ -129,56 +126,102 @@ def crear_grafico():
     system('dot -Tpdf maqueta.dot -o maqueta.pdf')
     startfile("maqueta.pdf")
 
-def resolver_maqueta(estructura, fila_inicial, columna_inicial, objetivos):
-    # Crear un grafo de caminos
-    caminos = {}
-    for i in range(estructura.filas):
-        for j in range(estructura.columnas):
-            if (i, j) not in caminos:
-                caminos[(i, j)] = []
-            if i > 0:
-                caminos[(i, j)].append((i - 1, j))
-            if i < estructura.filas - 1:
-                caminos[(i, j)].append((i + 1, j))
-            if j > 0:
-                caminos[(i, j)].append((i, j - 1))
-            if j < estructura.columnas - 1:
-                caminos[(i, j)].append((i, j + 1))
+def resolver_maqueta(maqueta):
 
-    # Función de backtracking para encontrar el recorrido
-    def encontrar_recorrido(fila, col, recorrido, objetivos_recogidos):
-        if (fila, col) in objetivos:
-            recorrido.recoger_objetivo(objetivos[(fila, col)])
-        if recorrido.objetivos_recogidos.issuperset(objetivos.values()):
-            return recorrido
+    nombre = maqueta.objeto.nombre
+    estructura = maqueta.objeto.estructura
+    objetivos = maqueta.objeto.objetivos
+    filas = maqueta.objeto.filas
+    columnas = maqueta.objeto.columnas
+    fila_entrada = maqueta.objeto.fila_in
+    columna_entrada = maqueta.objeto.col_in
 
-        siguientes_pasos = caminos[(fila, col)]
-        for paso in siguientes_pasos:
-            if estructura.estructura[paso[0]][paso[1]] != "*":
-                recorrido_nuevo = Recorrido()
-                recorrido_nuevo.agregar_al_camino((fila, col))
-                recorrido_nuevo.camino.extend(recorrido.camino)
-                recorrido_nuevo.objetivos_recogidos = set(recorrido.objetivos_recogidos)
-                recorrido_nuevo.objetivos_recogidos.update(recorrido.objetivos_recogidos)
-                encontrado = encontrar_recorrido(paso[0], paso[1], recorrido_nuevo, objetivos)
-                if encontrado:
-                    return encontrado
+    lista_objetivos = []
 
-        # Si no se encuentra un recorrido que recolecte todos los objetivos,
-        # se devuelve el último recorrido encontrado
-        return recorrido
+    now = objetivos.cabeza
+    while now:
+        nombre_objetivo = now.objeto.nombre_ob
+        lista_objetivos.append(nombre_objetivo)
+        now = now.siguiente
+    
+    matriz = [['-' for _ in range(columnas)] for _ in range(filas)]
 
-    # Llamar a la función de backtracking
-    recorrido = encontrar_recorrido(fila_inicial, columna_inicial, Recorrido(), objetivos)
+    nodo_actual = estructura.cabeza
 
-    # Resaltar el recorrido en el mapa
-    for paso in recorrido.camino:
-        estructura.estructura[paso[0]][paso[1]] = ":"
+    for i in range(filas):
+        for j in range(columnas):
+            objetivo_insertado = False
+            now = objetivos.cabeza
+            while now:
+                if now.objeto.fila_ob == i and now.objeto.col_ob == j:
+                    objetivo_insertado = True
+                    matriz[i][j] = now.objeto.nombre_ob
+                    break
+                now = now.siguiente
 
-    return recorrido
+            if not objetivo_insertado:
+                matriz[i][j] = nodo_actual.objeto.color
+                nodo_actual = nodo_actual.siguiente
+            else: 
+                nodo_actual = nodo_actual.siguiente
+        
+    def movimiento_valido(fila, columna):
+        return 0 <= fila < filas and 0 <= columna < columnas and matriz[fila][columna] != "*"
+
+    def bfs(fila, columna):
+        visitados = set()
+        queue = deque([(fila, columna, [])])
+
+        while queue:
+            fila_actual, columna_actual, camino_actual = queue.popleft()
+            if matriz[fila_actual][columna_actual] in lista_objetivos:
+                yield camino_actual
+
+            for df, dc in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+                nueva_fila, nueva_columna = fila_actual + df, columna_actual + dc
+
+                if movimiento_valido(nueva_fila, nueva_columna) and (nueva_fila, nueva_columna) not in visitados:
+                    nuevo_camino = camino_actual + [(nueva_fila, nueva_columna)]
+                    queue.append((nueva_fila, nueva_columna, nuevo_camino))
+                    visitados.add((nueva_fila, nueva_columna))
+
+    caminos = list(bfs(fila_entrada, columna_entrada))
+
+    if caminos:
+
+        mejor_camino = min(caminos, key=len)
+        for fila, columna in mejor_camino:
+            matriz[fila][columna] = "#"
+
+    else:
+        print("No se encontraron caminos para recolectar los objetivos.")
+
+    estructura_resuelta = ListaDoblementeEnlazada()
+    for i in range (filas):
+        for j in range(columnas):
+            
+            nueva_estructura = Estructura(matriz[i][j])
+            nuevo_nodo_estructura = Nodo(nueva_estructura)
+            estructura_resuelta.agregar_nodo(nuevo_nodo_estructura)
+
+    maqueta_resuelta = Maqueta(nombre, filas, columnas, fila_entrada, columna_entrada, objetivos, estructura_resuelta)
+    nuevo_nodo = Nodo(maqueta_resuelta)
+    lst_maquetas_resueltas.agregar_nodo(nuevo_nodo)
+    maqueta_a_graficar = lst_maquetas_resueltas.buscar_nodo(nombre)
+    crear_grafico(maqueta_a_graficar)
+
+    input('\n Presione enter para continuar')
+
+def ayuda():
+    print('\n--------------- Ayuda ---------------')
+    print('\n  Nombre: José Rolando Yaquian Paz')
+    print('  Carnet: 202201185')
+    print('  Carrera: Ingenieria en ciencias y sistemas')
+    print('  Link documentacion: https://github.com/josePaz156/IPC2_Proyecto2_202201185')
+    input('\n  Presione enter para continuar')
 
 def imprimir_menu():
-    print('\n--------------- Bienevanido a nuestro programa ---------------')
+    print('\n--------------- Bienevanido al programa ---------------')
     print('\n  1. Cargar Archivo')
     print('  2. Gestionar Maquetas')
     print('  3. Resolucion de maquetas')
@@ -196,12 +239,13 @@ while True:
     limpiar_consola()
     imprimir_menu()
 
-    opcion = input('Seleccione una pocion: ')
+    opcion = input('\n  Seleccione una pocion: ')
 
     if opcion == '1':
+        limpiar_consola()
         archivo_selc = input("ingrese el nombre del archivo: ")
         leer_archivo(archivo_selc)
-        input('Presione enter para continuar')
+        input('\n Presione enter para continuar')
 
     elif opcion == '2':
         while True:
@@ -211,7 +255,7 @@ while True:
             print('  2. Ver configuracion de maquetas')
             print('  3. Regresar al menu principal')
             
-            opcion2 = input('Seleccione una opcion: ')
+            opcion2 = input('\n Seleccione una opcion: ')
 
             if opcion2 == '1':
 
@@ -220,7 +264,7 @@ while True:
                 actual = lst_maquetas.cabeza
 
                 if actual is None:
-                    print('No hay maquetas.\n')
+                    print('\n No hay maquetas.\n')
                     input('Presione enter para continuar')
                 else:
                     while actual:
@@ -231,23 +275,43 @@ while True:
             elif opcion2 == '2':
 
                 limpiar_consola()
-                crear_grafico()
-                input('Presione enter para continuar')
+                actual = lst_maquetas.cabeza
+
+                if actual is None:
+                    print('\n No hay maquetas.\n')
+                    input('Presione enter para continuar')
+
+                else:
+                    maqueta_seleccionada = input('Ingrese el nombre de la maqueta: ')
+                    encontrado = lst_maquetas.buscar_nodo(maqueta_seleccionada)
+                    crear_grafico(encontrado)
+                    input('Presione enter para continuar')
+
             elif opcion2 == '3': 
                 break
             else: 
-                print('Opcion no valida')
-                input('Presione enter para continuar')
+                print('\n Opcion no valida')
+                input('\n Presione enter para continuar')
     
     elif opcion == '3':
         limpiar_consola()
-        maqueta_seleccionada = input('Seleccione el nombre de la maqueta: ')
-        maqueta_encontrada = lst_maquetas.buscar_nodo(maqueta_seleccionada)
-        resolver_maqueta(maqueta_encontrada)
+        actual = lst_maquetas.cabeza
 
-    
+        if actual is None:
+            print('\n No hay maquetas.\n')
+            input('Presione enter para continuar')
+        else:
+            maqueta_seleccionada = input('Ingrese el nombre de la maqueta: ')
+            maqueta_encontrada = lst_maquetas.buscar_nodo(maqueta_seleccionada)
+            resolver_maqueta(maqueta_encontrada)
+
+    elif opcion == '4':
+        limpiar_consola()
+        ayuda()
+
     elif opcion == '5':
-        print('Gracias por usar nuestro programa vuelva pronto')
+        limpiar_consola()
+        print('\n Gracias por usar nuestro programa vuelva pronto \n')
         break
 
     else: 

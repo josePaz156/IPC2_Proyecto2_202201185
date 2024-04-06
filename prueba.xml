@@ -2,9 +2,9 @@
 <config>
     <maquetas>
         <maqueta>
-            <nombre> Casa </nombre>
-            <filas>9 </filas>
-            <columnas> 11 </columnas>
+            <nombre> Mesa </nombre>
+            <filas> 5 </filas>
+            <columnas> 15 </columnas>
             <entrada>
                 <fila> 1 </fila>
                 <columna> 3 </columna>
@@ -13,36 +13,22 @@
                 <objetivo>
                     <nombre> A </nombre>
                     <fila> 2</fila>
-                    <columna> 6 </columna>
+                    <columna> 3 </columna>
                 </objetivo>
                 <objetivo>
                     <nombre>B</nombre>
                     <fila> 3 </fila>
-                    <columna> 8 </columna>
-                </objetivo>
-                <objetivo>
-                    <nombre> C </nombre>
-                    <fila> 3 </fila>
-                    <columna> 3 </columna>
-                </objetivo>
-                <objetivo>
-                    <nombre> D </nombre>
-                    <fila> 8 </fila>
-                    <columna> 1 </columna>
+                    <columna> 10 </columna>
                 </objetivo>
             </objetivos>
-            <estructura> *-*-*****-*
-                         -----------
-                         *****--**-*
-                         ----****--*
-                         -*--*----**
-                         -******--*-
-                         -*-------**
-                         ******-*---
-                         ----------- </estructura>
+            <estructura> **--***********
+                         **----*****-***
+                         ***---**----***
+                         ***----*-****** 
+                         **--**-----****</estructura>
         </maqueta>
         <maqueta>
-            <nombre> Zapa </nombre>
+            <nombre> Sol </nombre>
             <filas> 4 </filas>
             <columnas> 4 </columnas>
             <entrada>
@@ -51,12 +37,12 @@
             </entrada>
             <objetivos>
                 <objetivo>
-                    <nombre> O1 </nombre>
+                    <nombre> A </nombre>
                     <fila> 2 </fila>
                     <columna> 1 </columna>
                 </objetivo>
                 <objetivo>
-                    <nombre> X1 </nombre>
+                    <nombre> B </nombre>
                     <fila> 0 </fila>
                     <columna> 2 </columna>
                 </objetivo>

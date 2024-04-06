@@ -12,6 +12,22 @@ class ListaDoblementeEnlazada:
             actual.siguiente = nuevo_nodo
             nuevo_nodo.anterior = actual
 
+    def tamano(self):
+        contador = 0
+        actual = self.cabeza
+        while actual:
+            contador += 1
+            actual = actual.siguiente
+        return contador
+    
+    def obtener_todos_los_objetivos(self):
+        objetivos = []
+        actual = self.cabeza
+        while actual:
+            objetivos.append(actual.objeto)
+            actual = actual.siguiente
+        return objetivos
+
     def ordenar_alfabeticamente(self):
         if self.cabeza is None:
             return
